@@ -3,9 +3,8 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import db from "@/lib/db";
+import { findUser, failLogin, resetLogin } from "@/lib/db";
 
-type User = { id: number; name: string; email: string; password: string; attempts: number; locked_until: number };
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
@@ -14,13 +13,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         const email = credentials?.email?.trim().toLowerCase();
         if (!email || !credentials?.password || credentials.password.length > 72) return null;
-        const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User | undefined;
+        const user = await findUser(email);
         if (!user || user.locked_until > Date.now()) { await bcrypt.compare(credentials.password, "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6Ttx4w7JqTnI/CqNDEb4Fflg/zElW"); return null; }
         if (!(await bcrypt.compare(credentials.password, user.password))) {
-          db.prepare("UPDATE users SET attempts = CASE WHEN locked_until > 0 AND locked_until <= ? THEN 1 ELSE attempts + 1 END, locked_until = CASE WHEN (CASE WHEN locked_until > 0 AND locked_until <= ? THEN 1 ELSE attempts + 1 END) >= 5 THEN ? ELSE 0 END WHERE id = ?").run(Date.now(), Date.now(), Date.now() + 15 * 60 * 1000, user.id);
+          await failLogin(user.id);
           return null;
         }
-        db.prepare("UPDATE users SET attempts = 0, locked_until = 0 WHERE id = ?").run(user.id);
+        await resetLogin(user.id);
         return { id: String(user.id), name: user.name, email: user.email };
       } }),
   ],
