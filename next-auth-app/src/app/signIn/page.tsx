@@ -1,0 +1,13 @@
+"use client";
+import { signIn } from "next-auth/react";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
+import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+function SignInForm() {
+ const params=useSearchParams(); const router=useRouter(); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
+ async function submit(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); setBusy(true); setError(""); const data=new FormData(e.currentTarget); try { const result=await signIn("credentials",{email:data.get("email"),password:data.get("password"),redirect:false}); if(result?.ok) { router.push("/dashboard"); router.refresh(); } else setError("Datos incorrectos o cuenta bloqueada temporalmente. Tras 5 intentos fallidos, espera 15 minutos."); } catch { setError("No se pudo iniciar sesión."); } finally {setBusy(false);} }
+ return <section className="center"><aside className="login-intro"><span className="intro-label">NEXT AUTH APP / ACCESO</span><div><span className="intro-number">01 — TU CUENTA</span><h2>Un acceso.<br />Tu espacio.</h2><p>Tu información de perfil y tu sesión, en un mismo lugar.</p></div><span className="intro-footer">Identidad y acceso</span></aside><div className="panel login"><span className="eyebrow">BIENVENIDO</span><h1>Iniciar sesión</h1><p>Accede a tu cuenta para consultar tu panel y perfil.</p>{params.get("registered") && <p role="status">Cuenta creada. Ya puedes iniciar sesión.</p>}{(error || params.get("error")) && <p className="error" role="alert">{error || "No se pudo iniciar sesión. Inténtalo nuevamente."}</p>}<form className="auth-form" onSubmit={submit}><label>Correo electrónico<input type="email" name="email" required autoComplete="email" /></label><label>Contraseña<input type="password" name="password" required autoComplete="current-password" /></label><button className="primary" disabled={busy}>{busy ? "Ingresando..." : "Ingresar"}</button></form><div className="divider">O CONTINÚA CON</div><button className="google" onClick={() => signIn("google", {callbackUrl:"/dashboard"})}><FcGoogle size={21}/> Google</button><button className="google provider" onClick={() => signIn("github", {callbackUrl:"/dashboard"})}><FaGithub size={20}/> GitHub</button><p className="login-note">¿No tienes cuenta? <Link className="text-link" href="/register">Regístrate</Link></p></div></section>;
+}
+export default function SignInPage(){ return <Suspense fallback={<section className="center">Cargando...</section>}><SignInForm/></Suspense>; }

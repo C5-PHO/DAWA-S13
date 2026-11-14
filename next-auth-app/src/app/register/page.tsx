@@ -1,0 +1,9 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+export default function RegisterPage() {
+ const [message,setMessage]=useState(""); const [busy,setBusy]=useState(false); const router=useRouter();
+ async function submit(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); setBusy(true); setMessage(""); const data=new FormData(e.currentTarget); try { const response=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(data))}); const result=await response.json(); if(!response.ok) setMessage(result.error); else router.push("/signIn?registered=1"); } catch { setMessage("No se pudo conectar con el servidor."); } finally { setBusy(false); } }
+ return <section className="center"><aside className="login-intro"><span className="intro-label">NEXT AUTH APP / REGISTRO</span><div><span className="intro-number">02 — TU CUENTA</span><h2>Crea tu<br />acceso.</h2><p>Registra tus datos para iniciar sesión.</p></div><span className="intro-footer">Identidad y acceso</span></aside><div className="panel login"><span className="eyebrow">NUEVA CUENTA</span><h1>Crear cuenta</h1><form className="auth-form" onSubmit={submit}><label>Nombre<input name="name" required maxLength={100} autoComplete="name" /></label><label>Correo electrónico<input name="email" type="email" required autoComplete="email" /></label><label>Contraseña<input name="password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" /></label>{message && <p className="error" role="alert">{message}</p>}<button className="primary" disabled={busy}>{busy ? "Creando..." : "Crear cuenta"}</button></form><p className="login-note">¿Ya tienes cuenta? <Link className="text-link" href="/signIn">Inicia sesión</Link></p></div></section>;
+}
